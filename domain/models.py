@@ -18,6 +18,7 @@ class AssetTransaction:
     ticker: str
     trsc_price: float
     trsc_quantity: float
+    fee: float
 
 @dataclass
 class OrderLine:
@@ -28,8 +29,3 @@ class OrderLine:
     ticker: str
     order_price: float
     order_quantity: float
-    fee: float
-
-    def __post_init__(self):
-        if isinstance(self.order_time, str):
-            self.order_time = datetime.strptime(self.order_time, '%Y-%m-%d %H:%M:%S.%f')

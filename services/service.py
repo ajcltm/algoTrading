@@ -1,5 +1,5 @@
 import abc
-from typing import List, Callable
+from typing import List, Dict
 from datetime import datetime
 from domain import models
 from adapters import repository
@@ -54,16 +54,22 @@ class BackTestingBroker(IBroker):
         self.order_api = orderApi
         self.order_api.connect(self.handle_deal_signal)
 
-    def handle_deal_signal(self, sender:str, asset_transaction:models.AssetTransaction):
+    def handle_deal_signal(self, sender:str, asset_transaction_data:List[Dict]):
+        asset_transaction = [models.AssetTransaction(**{**i, **{"fee":self.calculate_fee(i['trsc_price']*i['trsc_quantity'])}}) for i in asset_transaction_data]
         self.repo.add_asset_transaction(asset_transaction=asset_transaction)
+        self.deposit_or_withdrawal(pf_name=asset_transaction[0].pf_name, amounts=[i.fee for i in asset_transaction])
 
     def deposit_or_withdrawal(self, pf_name:str, amounts:List[int], funding_yn:str='n'):
         self.repo.add_cash_transaction([models.CashTransaction(cash_trsc_id=utils.create_id(), pf_name=pf_name, cash_trsc_time=self.timer.now(), funding_yn=funding_yn, amounts=v) for v in amounts])
 
     def limit_order(self, pf_name:str, ticker:List[str], order_price:List[float], order_quantity:List[float]):
-        orderLine = [models.OrderLine(order_id=utils.create_id(), pf_name=pf_name, order_type='limit_order', order_time=self.timer.now(), ticker=v, order_price=order_price[idx], order_quantity=order_quantity[idx], fee=self.calculate_fee(trading_scale=order_price[idx]*order_quantity[idx])) for idx, v in enumerate(ticker)]
+        orderLine = [models.OrderLine(order_id=utils.create_id(), pf_name=pf_name, order_type='limit_order', order_time=self.timer.now(), ticker=v, order_price=order_price[idx], order_quantity=order_quantity[idx]) for idx, v in enumerate(ticker)]
         self.repo.add_orderLine(orderLine=orderLine)
-        self.deposit_or_withdrawal(pf_name=pf_name, amounts=[-1*(v*order_quantity[idx]+orderLine[idx].fee) for idx, v in enumerate(order_price)])
+        self.order_api.send(orderLine)
+
+    def market_order(self, pf_name:str, ticker:List[str], order_quantity:List[float]):
+        orderLine = [models.OrderLine(order_id=utils.create_id(), pf_name=pf_name, order_type='market_order', order_time=self.timer.now(), ticker=v, order_price=None, order_quantity=order_quantity[idx]) for idx, v in enumerate(ticker)]
+        self.repo.add_orderLine(orderLine=orderLine)
         self.order_api.send(orderLine)
 
     def calculate_fee(self, trading_scale:float):

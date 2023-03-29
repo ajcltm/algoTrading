@@ -34,13 +34,15 @@ class CsvTransactionRepository(ITransactionRepository):
 
     def __init__(self, file_path:Path):
         self.file_path = file_path
-        self.cash_trsc_df = self.load_df(file_path.joinpath('cash_transaction.csv'))
-        self.asset_trsc_df = self.load_df(file_path.joinpath('asset_transaction.csv'))
-        self.orderLine_df = self.load_df(file_path.joinpath('orderLine.csv'))
+        self.cash_trsc_df = self.load_df(file_path.joinpath('cash_transaction.csv'), 'cash_trsc_time')
+        self.asset_trsc_df = self.load_df(file_path.joinpath('asset_transaction.csv'), 'asset_trsc_time')
+        self.orderLine_df = self.load_df(file_path.joinpath('orderLine.csv'), 'order_time')
     
-    def load_df(self, file_path:Path)->pd.DataFrame:
+    def load_df(self, file_path:Path, datetime_col)->pd.DataFrame:
         if file_path.exists():
-            return pd.read_csv(file_path)
+            df = pd.read_csv(file_path)
+            pd.to_datetime(df[datetime_col])
+            return df
         return None
 
     def commit(self):
