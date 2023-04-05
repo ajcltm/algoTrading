@@ -1,16 +1,15 @@
 import unittest
-from services import service
+from domain import brokers, timers
 from adapters import repository
 from entrypoints import api
-import config
 
 class Broker(unittest.TestCase):
 
     def setUp(self) -> None:
-        timer = service.FakeTimer()
+        timer = timers.FakeTimer()
         self.repo = repository.FakeTransactionRepository()
         order_api = api.FakeOrderApi(timer=timer, price_api=api.FakePriceApi())
-        self.broker = service.BackTestingBroker(timer=timer, repo=self.repo, orderApi=order_api)
+        self.broker = brokers.Broker(timer=timer, repo=self.repo, orderApi=order_api)
 
     def test_limit_order(self):
 
@@ -18,10 +17,10 @@ class Broker(unittest.TestCase):
         funding_scale = 7_000_000
         ticker = ['AMZN', 'APPL']
         order_price = [10_000, 20_000]
-        order_quantity = [500, 100]
+        order_scale = [50_000, 100_000]
 
         self.broker.deposit_or_withdrawal(pf_name=pf_name, amounts=[funding_scale], funding_yn='y')
-        self.broker.limit_order(pf_name=pf_name, ticker=ticker, order_price=order_price, order_quantity=order_quantity)
+        self.broker.limit_order(pf_name=pf_name, ticker=ticker, order_price=order_price, order_scale=order_scale)
 
         self.repo.commit()
 
@@ -36,10 +35,10 @@ class Broker(unittest.TestCase):
         pf_name = 'test_pf'
         funding_scale = 7_000_000
         ticker = ['AMZN', 'APPL']
-        order_quantity = [500, 100]
+        order_scale = [50_000, 100_000]
 
         self.broker.deposit_or_withdrawal(pf_name=pf_name, amounts=[funding_scale], funding_yn='y')
-        self.broker.market_order(pf_name=pf_name, ticker=ticker, order_quantity=order_quantity)
+        self.broker.market_order(pf_name=pf_name, ticker=ticker, order_scale=order_scale)
 
         self.repo.commit()
 

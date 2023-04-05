@@ -29,3 +29,4 @@ class OrderLine:
     ticker: str
     order_price: float
     order_quantity: float
+    order_scale: float
